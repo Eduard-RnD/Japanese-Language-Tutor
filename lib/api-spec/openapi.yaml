@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Japanese learning app API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: topics
+    description: Topic management
+  - name: words
+    description: Word management
+  - name: practice
+    description: Practice session operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +28,256 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /topics:
+    get:
+      operationId: listTopics
+      tags: [topics]
+      summary: List all topics
+      responses:
+        "200":
+          description: List of topics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Topic"
+    post:
+      operationId: createTopic
+      tags: [topics]
+      summary: Create a topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopicInput"
+      responses:
+        "201":
+          description: Created topic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Topic"
+
+  /topics/{id}:
+    get:
+      operationId: getTopic
+      tags: [topics]
+      summary: Get a topic by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Topic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Topic"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateTopic
+      tags: [topics]
+      summary: Update a topic
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopicUpdate"
+      responses:
+        "200":
+          description: Updated topic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Topic"
+    delete:
+      operationId: deleteTopic
+      tags: [topics]
+      summary: Delete a topic
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /words:
+    get:
+      operationId: listWords
+      tags: [words]
+      summary: List words with optional filters
+      parameters:
+        - name: topicId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: alphabet
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+            enum: [hiragana, katakana, kanji, null]
+      responses:
+        "200":
+          description: List of words
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Word"
+    post:
+      operationId: createWord
+      tags: [words]
+      summary: Create a word
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordInput"
+      responses:
+        "201":
+          description: Created word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+
+  /words/{id}:
+    get:
+      operationId: getWord
+      tags: [words]
+      summary: Get a word by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateWord
+      tags: [words]
+      summary: Update a word
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordUpdate"
+      responses:
+        "200":
+          description: Updated word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+    delete:
+      operationId: deleteWord
+      tags: [words]
+      summary: Delete a word
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /practice/next:
+    get:
+      operationId: getNextPracticeWord
+      tags: [practice]
+      summary: Get next word for practice session
+      parameters:
+        - name: alphabets
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated alphabets (hiragana,katakana,kanji)
+        - name: topicId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Next word to practice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PracticeWord"
+        "404":
+          description: No words found for the given filters
+
+  /practice/check:
+    post:
+      operationId: checkAnswer
+      tags: [practice]
+      summary: Check user answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerInput"
+      responses:
+        "200":
+          description: Answer result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResult"
+
+  /practice/stats:
+    get:
+      operationId: getPracticeStats
+      tags: [practice]
+      summary: Get practice statistics
+      responses:
+        "200":
+          description: Practice statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PracticeStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +288,194 @@ components:
       required:
         - status
 
+    Topic:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        wordCount:
+          type: integer
+        createdAt:
+          type: string
+
+    TopicInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+
+    TopicUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: ["string", "null"]
+
+    Word:
+      type: object
+      required: [id, japanese, reading, translation, alphabet, createdAt]
+      properties:
+        id:
+          type: integer
+        japanese:
+          type: string
+        reading:
+          type: string
+        translation:
+          type: string
+        alphabet:
+          type: string
+          enum: [hiragana, katakana, kanji]
+        topicId:
+          type: ["integer", "null"]
+        topicName:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        correctCount:
+          type: integer
+        incorrectCount:
+          type: integer
+        createdAt:
+          type: string
+
+    WordInput:
+      type: object
+      required: [japanese, reading, translation, alphabet]
+      properties:
+        japanese:
+          type: string
+          minLength: 1
+        reading:
+          type: string
+          minLength: 1
+        translation:
+          type: string
+          minLength: 1
+        alphabet:
+          type: string
+          enum: [hiragana, katakana, kanji]
+        topicId:
+          type: ["integer", "null"]
+        notes:
+          type: string
+
+    WordUpdate:
+      type: object
+      properties:
+        japanese:
+          type: string
+          minLength: 1
+        reading:
+          type: string
+          minLength: 1
+        translation:
+          type: string
+          minLength: 1
+        alphabet:
+          type: string
+          enum: [hiragana, katakana, kanji]
+        topicId:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+
+    PracticeWord:
+      type: object
+      required: [id, japanese, alphabet, topicName]
+      properties:
+        id:
+          type: integer
+        japanese:
+          type: string
+        alphabet:
+          type: string
+          enum: [hiragana, katakana, kanji]
+        topicName:
+          type: ["string", "null"]
+
+    AnswerInput:
+      type: object
+      required: [wordId, reading, translation]
+      properties:
+        wordId:
+          type: integer
+        reading:
+          type: string
+        translation:
+          type: string
+
+    AnswerResult:
+      type: object
+      required: [correct, readingCorrect, translationCorrect, correctReading, correctTranslation, japanese]
+      properties:
+        correct:
+          type: boolean
+        readingCorrect:
+          type: boolean
+        translationCorrect:
+          type: boolean
+        correctReading:
+          type: string
+        correctTranslation:
+          type: string
+        japanese:
+          type: string
+
+    PracticeStats:
+      type: object
+      required: [totalWords, totalAttempts, correctAttempts, accuracy, topicBreakdown, alphabetBreakdown]
+      properties:
+        totalWords:
+          type: integer
+        totalAttempts:
+          type: integer
+        correctAttempts:
+          type: integer
+        accuracy:
+          type: number
+        topicBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicStat"
+        alphabetBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlphabetStat"
+
+    TopicStat:
+      type: object
+      required: [topicName, wordCount, correctCount, incorrectCount]
+      properties:
+        topicName:
+          type: string
+        wordCount:
+          type: integer
+        correctCount:
+          type: integer
+        incorrectCount:
+          type: integer
+
+    AlphabetStat:
+      type: object
+      required: [alphabet, wordCount, correctCount, incorrectCount]
+      properties:
+        alphabet:
+          type: string
+        wordCount:
+          type: integer
+        correctCount:
+          type: integer
+        incorrectCount:
+          type: integer

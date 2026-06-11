@@ -1,10 +1,11 @@
-# [Project name]
+# Manabu — Japanese Learning App
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A web app for learning Japanese vocabulary with hiragana, katakana, and kanji practice, answer checking, and progress tracking.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @workspace/japanese-learning run dev` — run the frontend (port 23235)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -19,18 +20,29 @@ _Replace the heading above with the project's name, and this line with one sente
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
+- Frontend: React + Vite, TailwindCSS, shadcn/ui, framer-motion, wouter
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth for all API contracts)
+- `lib/db/src/schema/` — Drizzle ORM schema: `topics.ts`, `words.ts`
+- `artifacts/api-server/src/routes/` — API route handlers: `topics.ts`, `words.ts`, `practice.ts`
+- `artifacts/japanese-learning/src/pages/` — Frontend pages: `practice.tsx`, `words.tsx`, `topics.tsx`, `stats.tsx`
+- `artifacts/japanese-learning/src/components/layout.tsx` — App shell and navigation
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Contract-first: OpenAPI spec written first, then codegen produces React Query hooks and Zod validators
+- All practice stats tracked in-DB via `correct_count` / `incorrect_count` columns on `words` table
+- Answer checking is case-insensitive and trims whitespace
+- `topicId: null` from query params is handled explicitly in the practice route (avoids NaN from `Number(null)`)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Practice** — Select alphabets (hiragana/katakana/kanji) and an optional topic, then see random Japanese words and enter the reading + translation. Immediate feedback shows correct answers on mistakes.
+- **Words** — Searchable word library with add/edit/delete and per-word stats (correct/incorrect counts).
+- **Topics** — Manage vocabulary themes; words can be assigned to topics for focused practice.
+- **Stats** — Accuracy overview, breakdown by alphabet and topic.
 
 ## User preferences
 
@@ -38,7 +50,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- After any OpenAPI spec change: run `pnpm --filter @workspace/api-spec run codegen` before touching frontend hooks
+- After DB schema changes: run `pnpm --filter @workspace/db run push`
+- `topicId` query param from frontend can be the string `"null"` — parse it explicitly, don't rely on `Number(null)`
 
 ## Pointers
 
