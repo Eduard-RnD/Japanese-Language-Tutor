@@ -5,13 +5,14 @@ import {
   useListTopics 
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSpeak } from "@/hooks/use-speak";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Loader2, ArrowRight, CheckCircle2, XCircle, Volume2 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +25,7 @@ const answerSchema = z.object({
 
 export default function Practice() {
   const { toast } = useToast();
+  const { speak, speaking } = useSpeak();
   const [alphabets, setAlphabets] = useState<string[]>(["hiragana", "katakana", "kanji"]);
   const [topicId, setTopicId] = useState<string>("all");
   
@@ -57,7 +59,6 @@ export default function Practice() {
     },
   });
 
-  // Reset form when new word loads
   useEffect(() => {
     if (practiceWord) {
       form.reset({ reading: "", translation: "" });
@@ -135,8 +136,6 @@ export default function Practice() {
 
         {/* Main Card */}
         <Card className="border-2 shadow-md relative overflow-hidden bg-card/80 backdrop-blur-sm">
-          {/* subtle decorative texture/pattern could go here */}
-          
           {(wordLoading || isFetchingWord) && !result ? (
             <div className="h-[400px] flex items-center justify-center flex-col gap-4 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -153,9 +152,32 @@ export default function Practice() {
                 <div className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-4">
                   {practiceWord.alphabet} • {practiceWord.topicName || "General"}
                 </div>
-                <h2 className="text-7xl md:text-9xl font-serif text-primary mb-8" lang="ja">
-                  {practiceWord.japanese}
-                </h2>
+
+                {/* Japanese character + pronounce button */}
+                <div className="flex flex-col items-center gap-4 mb-8">
+                  <h2 className="text-7xl md:text-9xl font-serif text-primary" lang="ja">
+                    {practiceWord.japanese}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => speak(practiceWord.japanese)}
+                    disabled={speaking}
+                    title="Pronounce"
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium
+                      transition-all duration-200 select-none
+                      ${speaking
+                        ? "border-primary/40 text-primary bg-primary/10 cursor-default"
+                        : "border-border text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 active:scale-95"
+                      }
+                    `}
+                  >
+                    <Volume2
+                      className={`w-4 h-4 transition-transform ${speaking ? "scale-110 animate-pulse" : ""}`}
+                    />
+                    <span>{speaking ? "Playing..." : "Pronounce"}</span>
+                  </button>
+                </div>
               </CardHeader>
 
               <CardContent className="px-6 md:px-12 pb-12">
