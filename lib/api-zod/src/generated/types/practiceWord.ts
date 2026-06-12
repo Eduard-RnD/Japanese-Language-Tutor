@@ -10,6 +10,8 @@ import type { PracticeWordAlphabet } from './practiceWordAlphabet';
 export interface PracticeWord {
   id: number;
   japanese: string;
+  reading: string;
+  translation: string;
   alphabet: PracticeWordAlphabet;
   /** @nullable */
   topicName: string | null;

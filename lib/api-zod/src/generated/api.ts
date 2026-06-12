@@ -208,6 +208,8 @@ export const GetNextPracticeWordQueryParams = zod.object({
 export const GetNextPracticeWordResponse = zod.object({
   "id": zod.number(),
   "japanese": zod.string(),
+  "reading": zod.string(),
+  "translation": zod.string(),
   "alphabet": zod.enum(['hiragana', 'katakana', 'kanji']),
   "topicName": zod.string().nullable()
 })

@@ -393,11 +393,15 @@ components:
 
     PracticeWord:
       type: object
-      required: [id, japanese, alphabet, topicName]
+      required: [id, japanese, reading, translation, alphabet, topicName]
       properties:
         id:
           type: integer
         japanese:
+          type: string
+        reading:
+          type: string
+        translation:
           type: string
         alphabet:
           type: string
