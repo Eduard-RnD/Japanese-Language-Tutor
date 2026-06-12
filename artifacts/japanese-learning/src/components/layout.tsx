@@ -5,10 +5,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/", label: "Practice", icon: BookOpen },
-    { href: "/words", label: "Words", icon: Library },
-    { href: "/topics", label: "Topics", icon: Tags },
-    { href: "/stats", label: "Stats", icon: BarChart2 },
+    { href: "/", label: "Обучение", icon: BookOpen },
+    { href: "/words", label: "Слова", icon: Library },
+    { href: "/topics", label: "Темы", icon: Tags },
+    { href: "/stats", label: "Статистика", icon: BarChart2 },
   ];
 
   return (
