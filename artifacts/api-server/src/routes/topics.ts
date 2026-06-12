@@ -8,6 +8,7 @@ import {
   UpdateTopicParams,
   DeleteTopicParams,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../auth";
 
 const router = Router();
 
@@ -33,14 +34,16 @@ router.get("/topics", async (req, res) => {
   );
 });
 
-router.post("/topics", async (req, res) => {
+router.post("/topics", requireAdmin, async (req, res) => {
   const body = CreateTopicBody.parse(req.body);
   const [topic] = await db
     .insert(topicsTable)
     .values({ name: body.name, description: body.description ?? null })
     .returning();
 
-  res.status(201).json({ ...topic, wordCount: 0, createdAt: topic.createdAt.toISOString() });
+  res
+    .status(201)
+    .json({ ...topic, wordCount: 0, createdAt: topic.createdAt.toISOString() });
 });
 
 router.get("/topics/:id", async (req, res) => {
@@ -66,7 +69,7 @@ router.get("/topics/:id", async (req, res) => {
   res.json({ ...rows[0], createdAt: rows[0].createdAt.toISOString() });
 });
 
-router.patch("/topics/:id", async (req, res) => {
+router.patch("/topics/:id", requireAdmin, async (req, res) => {
   const { id } = UpdateTopicParams.parse({ id: Number(req.params.id) });
   const body = UpdateTopicBody.parse(req.body);
 
@@ -91,10 +94,14 @@ router.patch("/topics/:id", async (req, res) => {
     .where(eq(topicsTable.id, id))
     .groupBy(topicsTable.id);
 
-  res.json({ ...topic, wordCount: withCount?.wordCount ?? 0, createdAt: topic.createdAt.toISOString() });
+  res.json({
+    ...topic,
+    wordCount: withCount?.wordCount ?? 0,
+    createdAt: topic.createdAt.toISOString(),
+  });
 });
 
-router.delete("/topics/:id", async (req, res) => {
+router.delete("/topics/:id", requireAdmin, async (req, res) => {
   const { id } = DeleteTopicParams.parse({ id: Number(req.params.id) });
   await db.delete(topicsTable).where(eq(topicsTable.id, id));
   res.status(204).send();

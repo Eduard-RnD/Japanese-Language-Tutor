@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { db, wordsTable, topicsTable, insertWordSchema } from "@workspace/db";
+import {
+  db,
+  wordsTable,
+  topicsTable,
+  insertWordSchema,
+  type Alphabet,
+} from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import {
   CreateWordBody,
@@ -22,8 +28,10 @@ router.get("/words", async (req, res) => {
   });
 
   const conditions = [];
-  if (query.topicId != null) conditions.push(eq(wordsTable.topicId, query.topicId));
-  if (query.alphabet != null) conditions.push(eq(wordsTable.alphabet, query.alphabet));
+  if (query.topicId != null)
+    conditions.push(eq(wordsTable.topicId, query.topicId));
+  if (query.alphabet != null)
+    conditions.push(eq(wordsTable.alphabet, query.alphabet));
 
   const rows = await db
     .select({
@@ -44,12 +52,14 @@ router.get("/words", async (req, res) => {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(wordsTable.createdAt);
 
-  res.json(rows.map((r) => ({
-  ...r,
-  notes: r.notes ?? "",
-  topicName: r.topicName ?? null,
-  createdAt: r.createdAt.toISOString(),
-})));
+  res.json(
+    rows.map((r) => ({
+      ...r,
+      notes: r.notes ?? "",
+      topicName: r.topicName ?? null,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  );
 });
 
 router.post("/words", requireAdmin, async (req, res) => {
@@ -72,10 +82,19 @@ router.post("/words", requireAdmin, async (req, res) => {
     .returning();
 
   const topicName = body.topicId
-    ? (await db.select({ name: topicsTable.name }).from(topicsTable).where(eq(topicsTable.id, body.topicId)))[0]?.name
+    ? (
+        await db
+          .select({ name: topicsTable.name })
+          .from(topicsTable)
+          .where(eq(topicsTable.id, body.topicId))
+      )[0]?.name
     : null;
 
-  res.status(201).json({ ...word, topicName: topicName ?? null, createdAt: word.createdAt.toISOString() });
+  res.status(201).json({
+    ...word,
+    topicName: topicName ?? null,
+    createdAt: word.createdAt.toISOString(),
+  });
 });
 
 router.get("/words/export/csv", async (req, res) => {
@@ -93,7 +112,14 @@ router.get("/words/export/csv", async (req, res) => {
 
   const csv = stringify(rows, {
     header: true,
-    columns: ["japanese", "reading", "translation", "alphabet", "topicId", "notes"],
+    columns: [
+      "japanese",
+      "reading",
+      "translation",
+      "alphabet",
+      "topicId",
+      "notes",
+    ],
   });
 
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -113,7 +139,7 @@ router.post("/words/import/csv", requireAdmin, async (req, res) => {
     columns: true,
     skip_empty_lines: true,
     trim: true,
-  });
+  }) as Array<Record<string, string | undefined>>;
 
   let imported = 0;
 
@@ -130,7 +156,7 @@ router.post("/words/import/csv", requireAdmin, async (req, res) => {
       japanese: row.japanese,
       reading: row.reading,
       translation: row.translation,
-      alphabet: row.alphabet,
+      alphabet: row.alphabet as Alphabet,
       topicId: row.topicId ? Number(row.topicId) : null,
       notes: row.notes ?? "",
     });
@@ -172,9 +198,9 @@ router.get("/words/:id", async (req, res) => {
 router.patch("/words/:id", requireAdmin, async (req, res) => {
   const { id } = UpdateWordParams.parse({ id: Number(req.params.id) });
   const body = UpdateWordBody.parse({
-  ...req.body,
-  notes: req.body.notes ?? "",
-});
+    ...req.body,
+    notes: req.body.notes ?? "",
+  });
 
   const [word] = await db
     .update(wordsTable)
@@ -195,10 +221,19 @@ router.patch("/words/:id", requireAdmin, async (req, res) => {
   }
 
   const topicName = word.topicId
-    ? (await db.select({ name: topicsTable.name }).from(topicsTable).where(eq(topicsTable.id, word.topicId)))[0]?.name
+    ? (
+        await db
+          .select({ name: topicsTable.name })
+          .from(topicsTable)
+          .where(eq(topicsTable.id, word.topicId))
+      )[0]?.name
     : null;
 
-  res.json({ ...word, topicName: topicName ?? null, createdAt: word.createdAt.toISOString() });
+  res.json({
+    ...word,
+    topicName: topicName ?? null,
+    createdAt: word.createdAt.toISOString(),
+  });
 });
 
 router.delete("/words/:id", requireAdmin, async (req, res) => {

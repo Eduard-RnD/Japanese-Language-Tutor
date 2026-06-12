@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Pool } from "pg";
@@ -10,8 +11,28 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function setAuthCookie(res: Response, payload: object) {
+  const token = jwt.sign(payload, process.env.SESSION_SECRET!, {
+    expiresIn: "30d",
+  });
+
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
+}
+
 router.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const email =
+    typeof req.body.email === "string"
+      ? req.body.email.trim().toLowerCase()
+      : "";
+  const password =
+    typeof req.body.password === "string" ? req.body.password : "";
 
   const result = await pool.query(
     "SELECT id, email, password_hash, role FROM users WHERE email = $1",
@@ -31,22 +52,17 @@ router.post("/auth/login", async (req, res) => {
     role: user.role,
   };
 
-  const token = jwt.sign(payload, process.env.SESSION_SECRET!, {
-    expiresIn: "30d",
-  });
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
+  setAuthCookie(res, payload);
 
   res.json({ user: payload });
 });
 
 router.post("/auth/logout", async (_req, res) => {
-  res.clearCookie("token");
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
   res.json({ ok: true });
 });
 
@@ -56,21 +72,48 @@ router.get("/auth/me", async (req, res) => {
 });
 
 router.post("/auth/register", async (req, res) => {
-  const { email, password } = req.body;
+  const email =
+    typeof req.body.email === "string"
+      ? req.body.email.trim().toLowerCase()
+      : "";
+  const password =
+    typeof req.body.password === "string" ? req.body.password : "";
 
-  if (!email || !password || password.length < 8) {
-    res.status(400).json({ error: "Email and password min 8 chars required" });
+  if (!EMAIL_PATTERN.test(email)) {
+    res.status(400).json({ error: "Invalid email" });
     return;
   }
 
-  const passwordHash = bcrypt.hashSync(password, 10);
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
 
-  const result = await pool.query(
-    "INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
-    [email, passwordHash],
-  );
+  const existing = await pool.query("SELECT id FROM users WHERE email = $1", [
+    email,
+  ]);
+  if (existing.rowCount) {
+    res.status(409).json({ error: "Email already registered" });
+    return;
+  }
 
-  res.status(201).json({ user: result.rows[0] });
+  try {
+    const passwordHash = bcrypt.hashSync(password, 10);
+    const result = await pool.query(
+      "INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
+      [email, passwordHash],
+    );
+    const user = result.rows[0];
+
+    setAuthCookie(res, user);
+    res.status(201).json({ user });
+  } catch (error: any) {
+    if (error?.code === "23505") {
+      res.status(409).json({ error: "Email already registered" });
+      return;
+    }
+    throw error;
+  }
 });
 
 export default router;

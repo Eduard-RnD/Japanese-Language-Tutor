@@ -38,7 +38,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Search, Pencil, Trash2, BookOpen, Download, Upload } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  BookOpen,
+  Download,
+  Upload,
+} from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 type Alphabet = "hiragana" | "katakana" | "kanji";
 
@@ -68,6 +78,8 @@ const ALPHABET_COLORS: Record<Alphabet, string> = {
 
 export default function Words() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -78,19 +90,19 @@ export default function Words() {
   const [form, setForm] = useState<WordForm>(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const alphabetFilter = (
-  ["hiragana", "katakana", "kanji"] as const
-).includes(filterAlphabet as "hiragana" | "katakana" | "kanji")
-  ? (filterAlphabet as "hiragana" | "katakana" | "kanji")
-  : undefined;
+  const alphabetFilter = (["hiragana", "katakana", "kanji"] as const).includes(
+    filterAlphabet as "hiragana" | "katakana" | "kanji",
+  )
+    ? (filterAlphabet as "hiragana" | "katakana" | "kanji")
+    : undefined;
 
-const queryParams: {
-  alphabet?: "hiragana" | "katakana" | "kanji";
-  topicId?: number;
-} = {
-  ...(alphabetFilter && { alphabet: alphabetFilter }),
-  ...(filterTopic !== "all" && { topicId: parseInt(filterTopic) }),
-};
+  const queryParams: {
+    alphabet?: "hiragana" | "katakana" | "kanji";
+    topicId?: number;
+  } = {
+    ...(alphabetFilter && { alphabet: alphabetFilter }),
+    ...(filterTopic !== "all" && { topicId: parseInt(filterTopic) }),
+  };
 
   const { data: words, isLoading: wordsLoading } = useListWords(queryParams, {
     query: { queryKey: getListWordsQueryKey(queryParams) },
@@ -104,15 +116,16 @@ const queryParams: {
     queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
   };
 
-  const filtered = words?.filter((w) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      w.japanese.toLowerCase().includes(q) ||
-      w.reading.toLowerCase().includes(q) ||
-      w.translation.toLowerCase().includes(q)
-    );
-  }) ?? [];
+  const filtered =
+    words?.filter((w) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        w.japanese.toLowerCase().includes(q) ||
+        w.reading.toLowerCase().includes(q) ||
+        w.translation.toLowerCase().includes(q)
+      );
+    }) ?? [];
 
   const openCreate = () => {
     setEditingId(null);
@@ -135,7 +148,10 @@ const queryParams: {
 
   const handleSave = () => {
     if (!form.japanese || !form.reading || !form.translation) {
-      toast({ title: "Please fill in all required fields", variant: "destructive" });
+      toast({
+        title: "Заполните обязательные поля",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -153,24 +169,32 @@ const queryParams: {
         { id: editingId, data: payload as any },
         {
           onSuccess: () => {
-            toast({ title: "Word updated" });
+            toast({ title: "Слово обновлено" });
             setDialogOpen(false);
             invalidate();
           },
-          onError: () => toast({ title: "Failed to update word", variant: "destructive" }),
-        }
+          onError: () =>
+            toast({
+              title: "Не удалось обновить слово",
+              variant: "destructive",
+            }),
+        },
       );
     } else {
       createWord.mutate(
         { data: payload as any },
         {
           onSuccess: () => {
-            toast({ title: "Word added" });
+            toast({ title: "Слово добавлено" });
             setDialogOpen(false);
             invalidate();
           },
-          onError: () => toast({ title: "Failed to add word", variant: "destructive" }),
-        }
+          onError: () =>
+            toast({
+              title: "Не удалось добавить слово",
+              variant: "destructive",
+            }),
+        },
       );
     }
   };
@@ -181,90 +205,100 @@ const queryParams: {
       { id: deleteId },
       {
         onSuccess: () => {
-          toast({ title: "Word deleted" });
+          toast({ title: "Слово удалено" });
           setDeleteId(null);
           invalidate();
         },
-        onError: () => toast({ title: "Failed to delete word", variant: "destructive" }),
-      }
+        onError: () =>
+          toast({ title: "Не удалось удалить слово", variant: "destructive" }),
+      },
     );
   };
 
   const isPending = createWord.isPending || updateWord.isPending;
 
-const handleExportCsv = () => {
-  window.location.href = "/api/words/export/csv";
-};
+  const handleExportCsv = () => {
+    window.location.href = "/api/words/export/csv";
+  };
 
-const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
+  const handleImportCsv = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const csv = await file.text();
+    const csv = await file.text();
 
-  const response = await fetch("/api/words/import/csv", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ csv }),
-  });
-
-  if (!response.ok) {
-    toast({
-      title: "Import failed",
-      description: "Could not import CSV file.",
-      variant: "destructive",
+    const response = await fetch("/api/words/import/csv", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ csv }),
     });
-    return;
-  }
 
-  const result = await response.json();
+    if (!response.ok) {
+      toast({
+        title: "Не удалось импортировать CSV",
+        description: "Проверьте файл и попробуйте ещё раз.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  toast({
-    title: "Import completed",
-    description: `Imported ${result.imported} words.`,
-  });
+    const result = await response.json();
 
-  invalidate();
-  event.target.value = "";
-};
+    toast({
+      title: "Импорт завершён",
+      description: `Импортировано слов: ${result.imported}.`,
+    });
+
+    invalidate();
+    event.target.value = "";
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-primary">Word Library</h1>
+          <h1 className="text-2xl font-serif font-bold text-primary">
+            Словарь
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {words?.length ?? 0} words in total
+            Всего слов: {words?.length ?? 0}
           </p>
         </div>
-       <div className="flex gap-2">
-  <Button variant="outline" onClick={handleExportCsv}>
-    <Download className="w-4 h-4 mr-2" />
-    Export CSV
-  </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCsv}>
+            <Download className="w-4 h-4 mr-2" />
+            Экспорт CSV
+          </Button>
 
-  <label>
-    <input
-      type="file"
-      accept=".csv,text/csv"
-      className="hidden"
-      onChange={handleImportCsv}
-    />
-    <Button variant="outline" asChild>
-      <span>
-        <Upload className="w-4 h-4 mr-2" />
-        Import CSV
-      </span>
-    </Button>
-  </label>
+          {isAdmin && (
+            <label>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={handleImportCsv}
+              />
+              <Button variant="outline" asChild>
+                <span>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Импорт CSV
+                </span>
+              </Button>
+            </label>
+          )}
 
-  <Button onClick={openCreate} className="gap-2">
-    <Plus className="w-4 h-4" />
-    Add Word
-  </Button>
-</div>
+          {isAdmin && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Добавить слово
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -272,7 +306,7 @@ const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search by character, reading, meaning..."
+            placeholder="Поиск по символу, чтению или значению..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -280,21 +314,21 @@ const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
         </div>
         <Select value={filterAlphabet} onValueChange={setFilterAlphabet}>
           <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Alphabet" />
+            <SelectValue placeholder="Система письма" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Alphabets</SelectItem>
-            <SelectItem value="hiragana">Hiragana</SelectItem>
-            <SelectItem value="katakana">Katakana</SelectItem>
-            <SelectItem value="kanji">Kanji</SelectItem>
+            <SelectItem value="all">Все системы</SelectItem>
+            <SelectItem value="hiragana">Хирагана</SelectItem>
+            <SelectItem value="katakana">Катакана</SelectItem>
+            <SelectItem value="kanji">Кандзи</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterTopic} onValueChange={setFilterTopic}>
           <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Topic" />
+            <SelectValue placeholder="Тема" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Topics</SelectItem>
+            <SelectItem value="all">Все темы</SelectItem>
             {topics?.map((t) => (
               <SelectItem key={t.id} value={String(t.id)}>
                 {t.name}
@@ -308,18 +342,22 @@ const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
       {wordsLoading ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          Loading words...
+          Загружаем слова...
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
           <BookOpen className="w-10 h-10 opacity-30" />
           <p className="text-lg">
-            {search ? "No words match your search" : "No words yet"}
+            {search ? "По вашему запросу ничего не найдено" : "Слов пока нет"}
           </p>
-          {!search && (
-            <Button variant="outline" onClick={openCreate} className="gap-2 mt-2">
+          {!search && isAdmin && (
+            <Button
+              variant="outline"
+              onClick={openCreate}
+              className="gap-2 mt-2"
+            >
               <Plus className="w-4 h-4" />
-              Add your first word
+              Добавить первое слово
             </Button>
           )}
         </div>
@@ -329,7 +367,10 @@ const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
             <div
               key={word.id}
               className="flex items-center gap-4 bg-card border rounded-lg px-4 py-3 shadow-sm hover:shadow-md transition-shadow group animate-in fade-in slide-in-from-bottom-1"
-              style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
+              style={{
+                animationDelay: `${i * 30}ms`,
+                animationFillMode: "both",
+              }}
             >
               <div className="w-16 text-center shrink-0">
                 <span className="text-2xl font-serif text-primary" lang="ja">
@@ -337,8 +378,12 @@ const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-foreground">{word.reading}</div>
-                <div className="text-sm text-muted-foreground truncate">{word.translation}</div>
+                <div className="font-medium text-foreground">
+                  {word.reading}
+                </div>
+                <div className="text-sm text-muted-foreground truncate">
+                  {word.translation}
+                </div>
               </div>
               <div className="hidden sm:flex items-center gap-2 shrink-0">
                 <span
@@ -353,153 +398,178 @@ const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
                 )}
               </div>
               <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-                <span className="text-green-600 font-medium">{word.correctCount}✓</span>
-                <span className="text-destructive font-medium">{word.incorrectCount}✗</span>
+                <span className="text-green-600 font-medium">
+                  {word.correctCount}✓
+                </span>
+                <span className="text-destructive font-medium">
+                  {word.incorrectCount}✗
+                </span>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => openEdit(word)}
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => setDeleteId(word.id)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openEdit(word)}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteId(word.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
       {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-serif">
-              {editingId !== null ? "Edit Word" : "Add New Word"}
-            </DialogTitle>
-          </DialogHeader>
+      {isAdmin && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-serif">
+                {editingId !== null ? "Редактировать слово" : "Добавить слово"}
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Japanese character / word *</Label>
-              <Input
-                value={form.japanese}
-                onChange={(e) => setForm((f) => ({ ...f, japanese: e.target.value }))}
-                placeholder="あ, 山, コーヒー..."
-                className="text-xl font-serif"
-                lang="ja"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 py-2">
               <div className="space-y-1.5">
-                <Label>Reading *</Label>
+                <Label>Японский символ или слово *</Label>
                 <Input
-                  value={form.reading}
-                  onChange={(e) => setForm((f) => ({ ...f, reading: e.target.value }))}
-                  placeholder="e.g. koohii"
+                  value={form.japanese}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, japanese: e.target.value }))
+                  }
+                  placeholder="あ, 山, コーヒー..."
+                  className="text-xl font-serif"
+                  lang="ja"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Чтение *</Label>
+                  <Input
+                    value={form.reading}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, reading: e.target.value }))
+                    }
+                    placeholder="e.g. koohii"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Перевод *</Label>
+                  <Input
+                    value={form.translation}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, translation: e.target.value }))
+                    }
+                    placeholder="e.g. coffee"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Система письма *</Label>
+                  <Select
+                    value={form.alphabet}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, alphabet: v as Alphabet }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hiragana">Хирагана</SelectItem>
+                      <SelectItem value="katakana">Катакана</SelectItem>
+                      <SelectItem value="kanji">Кандзи</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Тема</Label>
+                  <Select
+                    value={form.topicId}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, topicId: v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Без темы" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Без темы</SelectItem>
+                      {topics?.map((t) => (
+                        <SelectItem key={t.id} value={String(t.id)}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label>Translation *</Label>
-                <Input
-                  value={form.translation}
-                  onChange={(e) => setForm((f) => ({ ...f, translation: e.target.value }))}
-                  placeholder="e.g. coffee"
+                <Label>Заметки (необязательно)</Label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, notes: e.target.value }))
+                  }
+                  placeholder="Дополнительные заметки о слове"
+                  rows={2}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Alphabet *</Label>
-                <Select
-                  value={form.alphabet}
-                  onValueChange={(v) => setForm((f) => ({ ...f, alphabet: v as Alphabet }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hiragana">Hiragana</SelectItem>
-                    <SelectItem value="katakana">Katakana</SelectItem>
-                    <SelectItem value="kanji">Kanji</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Topic</Label>
-                <Select
-                  value={form.topicId}
-                  onValueChange={(v) => setForm((f) => ({ ...f, topicId: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No topic</SelectItem>
-                    {topics?.map((t) => (
-                      <SelectItem key={t.id} value={String(t.id)}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Notes (optional)</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Any extra notes about this word..."
-                rows={2}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={isPending}>
-              {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingId !== null ? "Save Changes" : "Add Word"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button onClick={handleSave} disabled={isPending}>
+                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingId !== null ? "Сохранить изменения" : "Добавить слово"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this word?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the word and all its practice history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {isAdmin && (
+        <AlertDialog
+          open={deleteId !== null}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Удалить это слово?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Слово и вся связанная с ним история тренировок будут удалены.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Удалить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

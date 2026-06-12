@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Pencil, Trash2, Tags, BookOpen } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 interface TopicForm {
   name: string;
@@ -41,6 +42,8 @@ const EMPTY_FORM: TopicForm = { name: "", description: "" };
 
 export default function Topics() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -71,7 +74,7 @@ export default function Topics() {
 
   const handleSave = () => {
     if (!form.name.trim()) {
-      toast({ title: "Topic name is required", variant: "destructive" });
+      toast({ title: "Введите название темы", variant: "destructive" });
       return;
     }
 
@@ -85,24 +88,29 @@ export default function Topics() {
         { id: editingId, data: payload },
         {
           onSuccess: () => {
-            toast({ title: "Topic updated" });
+            toast({ title: "Тема обновлена" });
             setDialogOpen(false);
             invalidate();
           },
-          onError: () => toast({ title: "Failed to update topic", variant: "destructive" }),
-        }
+          onError: () =>
+            toast({
+              title: "Не удалось обновить тему",
+              variant: "destructive",
+            }),
+        },
       );
     } else {
       createTopic.mutate(
         { data: payload },
         {
           onSuccess: () => {
-            toast({ title: "Topic created" });
+            toast({ title: "Тема создана" });
             setDialogOpen(false);
             invalidate();
           },
-          onError: () => toast({ title: "Failed to create topic", variant: "destructive" }),
-        }
+          onError: () =>
+            toast({ title: "Не удалось создать тему", variant: "destructive" }),
+        },
       );
     }
   };
@@ -113,12 +121,13 @@ export default function Topics() {
       { id: deleteId },
       {
         onSuccess: () => {
-          toast({ title: "Topic deleted" });
+          toast({ title: "Тема удалена" });
           setDeleteId(null);
           invalidate();
         },
-        onError: () => toast({ title: "Failed to delete topic", variant: "destructive" }),
-      }
+        onError: () =>
+          toast({ title: "Не удалось удалить тему", variant: "destructive" }),
+      },
     );
   };
 
@@ -128,30 +137,38 @@ export default function Topics() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-primary">Topics</h1>
+          <h1 className="text-2xl font-serif font-bold text-primary">Темы</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Organise your vocabulary by theme
+            Группируйте слова по темам
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          New Topic
-        </Button>
+        {isAdmin && (
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Новая тема
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          Loading topics...
+          Загружаем темы...
         </div>
       ) : !topics || topics.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
           <Tags className="w-10 h-10 opacity-30" />
-          <p className="text-lg">No topics yet</p>
-          <Button variant="outline" onClick={openCreate} className="gap-2 mt-2">
-            <Plus className="w-4 h-4" />
-            Create your first topic
-          </Button>
+          <p className="text-lg">Тем пока нет</p>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={openCreate}
+              className="gap-2 mt-2"
+            >
+              <Plus className="w-4 h-4" />
+              Создать первую тему
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -159,7 +176,10 @@ export default function Topics() {
             <div
               key={topic.id}
               className="bg-card border rounded-lg p-5 shadow-sm hover:shadow-md transition-all group flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2"
-              style={{ animationDelay: `${i * 50}ms`, animationFillMode: "both" }}
+              style={{
+                animationDelay: `${i * 50}ms`,
+                animationFillMode: "both",
+              }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -172,34 +192,36 @@ export default function Topics() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => openEdit(topic)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => setDeleteId(topic.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEdit(topic)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteId(topic.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border/60">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <BookOpen className="w-4 h-4" />
-                  <span>{topic.wordCount} word{topic.wordCount !== 1 ? "s" : ""}</span>
+                  <span>{topic.wordCount} слов</span>
                 </div>
                 <Link href={`/words?topic=${topic.id}`}>
                   <button className="text-xs text-primary hover:underline font-medium">
-                    View words
+                    Смотреть слова
                   </button>
                 </Link>
               </div>
@@ -209,67 +231,78 @@ export default function Topics() {
       )}
 
       {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-serif">
-              {editingId !== null ? "Edit Topic" : "New Topic"}
-            </DialogTitle>
-          </DialogHeader>
+      {isAdmin && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-serif">
+                {editingId !== null ? "Редактировать тему" : "Новая тема"}
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Food & Drinks, Numbers, Nature..."
-                autoFocus
-              />
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Название *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder="Например: Еда, Числа, Природа"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Описание</Label>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
+                  placeholder="Необязательное описание темы"
+                  rows={3}
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Optional description for this topic..."
-                rows={3}
-              />
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={isPending}>
-              {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingId !== null ? "Save Changes" : "Create Topic"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button onClick={handleSave} disabled={isPending}>
+                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingId !== null ? "Сохранить изменения" : "Создать тему"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this topic?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the topic. Words assigned to it will remain but become untagged.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {isAdmin && (
+        <AlertDialog
+          open={deleteId !== null}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Удалить эту тему?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Тема будет удалена. Слова сохранятся, но останутся без темы.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Удалить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

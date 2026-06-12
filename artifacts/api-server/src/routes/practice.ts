@@ -5,6 +5,7 @@ import {
   GetNextPracticeWordQueryParams,
   CheckAnswerBody,
 } from "@workspace/api-zod";
+import { requireAuth } from "../auth";
 
 const router = Router();
 
@@ -19,28 +20,29 @@ router.get("/practice/next", async (req, res) => {
   });
 
   const alphabetList = query.alphabets
-  .split(",")
-  .map((a) => a.trim())
-  .filter((a): a is "hiragana" | "katakana" | "kanji" =>
-    ["hiragana", "katakana", "kanji"].includes(a),
-  );
+    .split(",")
+    .map((a) => a.trim())
+    .filter((a): a is "hiragana" | "katakana" | "kanji" =>
+      ["hiragana", "katakana", "kanji"].includes(a),
+    );
   if (alphabetList.length === 0) {
     res.status(400).json({ error: "At least one alphabet required" });
     return;
   }
 
   const conditions = [inArray(wordsTable.alphabet, alphabetList)];
-  if (query.topicId != null) conditions.push(eq(wordsTable.topicId, query.topicId));
+  if (query.topicId != null)
+    conditions.push(eq(wordsTable.topicId, query.topicId));
 
- const words = await db
-  .select({
-    id: wordsTable.id,
-    japanese: wordsTable.japanese,
-    reading: wordsTable.reading,
-    translation: wordsTable.translation,
-    alphabet: wordsTable.alphabet,
-    topicName: topicsTable.name,
-  })
+  const words = await db
+    .select({
+      id: wordsTable.id,
+      japanese: wordsTable.japanese,
+      reading: wordsTable.reading,
+      translation: wordsTable.translation,
+      alphabet: wordsTable.alphabet,
+      topicName: topicsTable.name,
+    })
     .from(wordsTable)
     .leftJoin(topicsTable, eq(topicsTable.id, wordsTable.topicId))
     .where(and(...conditions))
@@ -70,7 +72,8 @@ router.post("/practice/check", async (req, res) => {
 
   const normalize = (s: string) => s.trim().toLowerCase();
   const readingCorrect = normalize(body.reading) === normalize(word.reading);
-  const translationCorrect = normalize(body.translation) === normalize(word.translation);
+  const translationCorrect =
+    normalize(body.translation) === normalize(word.translation);
   const correct = readingCorrect && translationCorrect;
 
   await db
@@ -92,7 +95,8 @@ router.post("/practice/check", async (req, res) => {
   });
 });
 
-router.get("/practice/stats", async (req, res) => {
+router.get("/practice/stats", requireAuth, async (req, res) => {
+  // TODO: Move statistics from global word counters to per-user practice_attempts.
   const words = await db
     .select({
       id: wordsTable.id,
@@ -111,18 +115,32 @@ router.get("/practice/stats", async (req, res) => {
   const totalAttempts = totalCorrect + totalIncorrect;
   const accuracy = totalAttempts > 0 ? totalCorrect / totalAttempts : 0;
 
-  const alphabetMap = new Map<string, { wordCount: number; correctCount: number; incorrectCount: number }>();
-  const topicMap = new Map<string, { wordCount: number; correctCount: number; incorrectCount: number }>();
+  const alphabetMap = new Map<
+    string,
+    { wordCount: number; correctCount: number; incorrectCount: number }
+  >();
+  const topicMap = new Map<
+    string,
+    { wordCount: number; correctCount: number; incorrectCount: number }
+  >();
 
   for (const w of words) {
-    const a = alphabetMap.get(w.alphabet) ?? { wordCount: 0, correctCount: 0, incorrectCount: 0 };
+    const a = alphabetMap.get(w.alphabet) ?? {
+      wordCount: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+    };
     a.wordCount++;
     a.correctCount += w.correctCount;
     a.incorrectCount += w.incorrectCount;
     alphabetMap.set(w.alphabet, a);
 
     const topicKey = w.topicName ?? "No topic";
-    const t = topicMap.get(topicKey) ?? { wordCount: 0, correctCount: 0, incorrectCount: 0 };
+    const t = topicMap.get(topicKey) ?? {
+      wordCount: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+    };
     t.wordCount++;
     t.correctCount += w.correctCount;
     t.incorrectCount += w.incorrectCount;
@@ -134,8 +152,13 @@ router.get("/practice/stats", async (req, res) => {
     totalAttempts,
     correctAttempts: totalCorrect,
     accuracy,
-    topicBreakdown: Array.from(topicMap.entries()).map(([topicName, s]) => ({ topicName, ...s })),
-    alphabetBreakdown: Array.from(alphabetMap.entries()).map(([alphabet, s]) => ({ alphabet, ...s })),
+    topicBreakdown: Array.from(topicMap.entries()).map(([topicName, s]) => ({
+      topicName,
+      ...s,
+    })),
+    alphabetBreakdown: Array.from(alphabetMap.entries()).map(
+      ([alphabet, s]) => ({ alphabet, ...s }),
+    ),
   });
 });
 
