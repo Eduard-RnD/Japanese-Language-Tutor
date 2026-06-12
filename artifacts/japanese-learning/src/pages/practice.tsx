@@ -36,21 +36,23 @@ export default function Practice() {
     topicId: topicId === "all" ? null : parseInt(topicId),
   };
 
-  const { 
-    data: practiceWord, 
-    isLoading: wordLoading,
-    refetch: fetchNextWord,
-    isFetching: isFetchingWord
-  } = useGetNextPracticeWord(queryParams, {
-    query: {
-      enabled: alphabets.length > 0,
-      staleTime: 0,
-    }
-  });
+  const {
+  data: practiceWord,
+  isLoading: wordLoading,
+  refetch: fetchNextWord,
+  isFetching: isFetchingWord
+} = useGetNextPracticeWord(queryParams, {
+  query: {
+    queryKey: ["practice-word", queryParams],
+    enabled: alphabets.length > 0,
+    staleTime: 0,
+  }
+});
 
   const checkAnswer = useCheckAnswer();
   const [result, setResult] = useState<any>(null);
-
+  const [showReading, setShowReading] = useState(false);
+const [showTranslation, setShowTranslation] = useState(false);
   const form = useForm<z.infer<typeof answerSchema>>({
     resolver: zodResolver(answerSchema),
     defaultValues: {
@@ -61,9 +63,11 @@ export default function Practice() {
 
   useEffect(() => {
     if (practiceWord) {
-      form.reset({ reading: "", translation: "" });
-      setResult(null);
-    }
+  form.reset({ reading: "", translation: "" });
+  setResult(null);
+  setShowReading(false);
+  setShowTranslation(false);
+}
   }, [practiceWord, form]);
 
   const onSubmit = (values: z.infer<typeof answerSchema>) => {
@@ -186,45 +190,89 @@ export default function Practice() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
-                          control={form.control}
-                          name="reading"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-muted-foreground">Reading (Kana/Romaji)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="e.g. arigatou" 
-                                  className="text-lg py-6 bg-background/50 focus:bg-background transition-colors" 
-                                  autoFocus 
-                                  autoComplete="off"
-                                  autoCapitalize="off"
-                                  autoCorrect="off"
-                                  spellCheck="false"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+  control={form.control}
+  name="reading"
+  render={({ field }) => (
+    <div>
+      <FormItem>
+        <FormLabel className="text-muted-foreground">
+          Reading (Kana/Romaji)
+        </FormLabel>
+        <FormControl>
+          <Input
+            placeholder="e.g. arigatou"
+            className="text-lg py-6 bg-background/50 focus:bg-background transition-colors"
+            autoFocus
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
+            {...field}
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-2"
+        onClick={() => setShowReading((v) => !v)}
+      >
+        {showReading ? "Hide reading" : "Show reading"}
+      </Button>
+
+      {showReading && practiceWord && (
+        <div className="mt-2 text-sm text-muted-foreground">
+          Correct reading:{" "}
+          <span className="font-semibold">
+            {practiceWord.reading}
+          </span>
+        </div>
+      )}
+    </div>
+  )}
+/>
                         <FormField
-                          control={form.control}
-                          name="translation"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-muted-foreground">Meaning (English)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="e.g. thank you" 
-                                  className="text-lg py-6 bg-background/50 focus:bg-background transition-colors"
-                                  autoComplete="off"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+  control={form.control}
+  name="translation"
+  render={({ field }) => (
+    <div>
+      <FormItem>
+        <FormLabel className="text-muted-foreground">
+          Meaning (English)
+        </FormLabel>
+        <FormControl>
+          <Input
+            placeholder="e.g. thank you"
+            className="text-lg py-6 bg-background/50 focus:bg-background transition-colors"
+            autoComplete="off"
+            {...field}
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-2"
+        onClick={() => setShowTranslation((v) => !v)}
+      >
+        {showTranslation ? "Hide meaning" : "Show meaning"}
+      </Button>
+
+      {showTranslation && practiceWord && (
+        <div className="mt-2 text-sm text-muted-foreground">
+          Correct meaning:{" "}
+          <span className="font-semibold">
+            {practiceWord.translation}
+          </span>
+        </div>
+      )}
+    </div>
+  )}
+/>
                       </div>
                       <div className="pt-4 flex justify-center">
                         <Button 

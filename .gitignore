@@ -47,3 +47,16 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# My
+.env
+.env.*
+ecosystem.config.cjs
+
+node_modules/
+dist/
+coverage/
+
+*.dump
+*.sql
+backups/

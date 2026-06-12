@@ -7,6 +7,8 @@ import Practice from "@/pages/practice";
 import Words from "@/pages/words";
 import Topics from "@/pages/topics";
 import Stats from "@/pages/stats";
+import Login from "@/pages/login";
+import { ProtectedRoute } from "@/components/protected-route";
 
 const queryClient = new QueryClient();
 
@@ -14,14 +16,36 @@ function Router() {
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={Practice} />
-        <Route path="/words" component={Words} />
-        <Route path="/topics" component={Topics} />
-        <Route path="/stats" component={Stats} />
-        <Route>
-          <div className="text-center py-20 text-muted-foreground">Page not found</div>
-        </Route>
-      </Switch>
+  <Route path="/login" component={Login} />
+
+  <Route path="/">
+    <ProtectedRoute>
+      <Practice />
+    </ProtectedRoute>
+  </Route>
+
+  <Route path="/words">
+    <ProtectedRoute>
+      <Words />
+    </ProtectedRoute>
+  </Route>
+
+  <Route path="/topics">
+    <ProtectedRoute>
+      <Topics />
+    </ProtectedRoute>
+  </Route>
+
+  <Route path="/stats">
+    <ProtectedRoute>
+      <Stats />
+    </ProtectedRoute>
+  </Route>
+
+  <Route>
+    <div className="text-center py-20 text-muted-foreground">Page not found</div>
+  </Route>
+</Switch>
     </Layout>
   );
 }

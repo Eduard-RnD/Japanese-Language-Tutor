@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg-grad" x1="87.15724127386972%" y1="83.4565303179429%" x2="12.842758726130285%" y2="16.543469682057086%">
+        <stop offset="0%" stop-color="#8c0d37"/>
+        <stop offset="100%" stop-color="#c41230"/>
+      </linearGradient>
+    <clipPath id="canvas-clip">
+      <rect width="512" height="512" rx="256" ry="256"/>
+    </clipPath>
+  </defs>
+  <rect width="512" height="512" rx="256" ry="256" fill="url(#bg-grad)" stroke="#FFFFFF" stroke-width="48" clip-path="url(#canvas-clip)"/>
+  <g clip-path="url(#canvas-clip)">
+    <g transform="rotate(0, 256, 256)">
+      
+      <text x="256" y="256" text-anchor="middle" dominant-baseline="central" font-family="'Montserrat', sans-serif" font-weight="800" font-size="216" fill="#FFFFFF">学</text>
+    </g>
+  </g>
+</svg>

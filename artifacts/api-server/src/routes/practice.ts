@@ -18,7 +18,12 @@ router.get("/practice/next", async (req, res) => {
     topicId: topicIdNum,
   });
 
-  const alphabetList = query.alphabets.split(",").map((a) => a.trim()).filter(Boolean);
+  const alphabetList = query.alphabets
+  .split(",")
+  .map((a) => a.trim())
+  .filter((a): a is "hiragana" | "katakana" | "kanji" =>
+    ["hiragana", "katakana", "kanji"].includes(a),
+  );
   if (alphabetList.length === 0) {
     res.status(400).json({ error: "At least one alphabet required" });
     return;
@@ -27,13 +32,15 @@ router.get("/practice/next", async (req, res) => {
   const conditions = [inArray(wordsTable.alphabet, alphabetList)];
   if (query.topicId != null) conditions.push(eq(wordsTable.topicId, query.topicId));
 
-  const words = await db
-    .select({
-      id: wordsTable.id,
-      japanese: wordsTable.japanese,
-      alphabet: wordsTable.alphabet,
-      topicName: topicsTable.name,
-    })
+ const words = await db
+  .select({
+    id: wordsTable.id,
+    japanese: wordsTable.japanese,
+    reading: wordsTable.reading,
+    translation: wordsTable.translation,
+    alphabet: wordsTable.alphabet,
+    topicName: topicsTable.name,
+  })
     .from(wordsTable)
     .leftJoin(topicsTable, eq(topicsTable.id, wordsTable.topicId))
     .where(and(...conditions))

@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Search, Pencil, Trash2, BookOpen } from "lucide-react";
+import { Loader2, Plus, Search, Pencil, Trash2, BookOpen, Download, Upload } from "lucide-react";
 
 type Alphabet = "hiragana" | "katakana" | "kanji";
 
@@ -78,10 +78,19 @@ export default function Words() {
   const [form, setForm] = useState<WordForm>(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const queryParams = {
-    ...(filterAlphabet !== "all" && { alphabet: filterAlphabet }),
-    ...(filterTopic !== "all" && { topicId: parseInt(filterTopic) }),
-  };
+  const alphabetFilter = (
+  ["hiragana", "katakana", "kanji"] as const
+).includes(filterAlphabet as "hiragana" | "katakana" | "kanji")
+  ? (filterAlphabet as "hiragana" | "katakana" | "kanji")
+  : undefined;
+
+const queryParams: {
+  alphabet?: "hiragana" | "katakana" | "kanji";
+  topicId?: number;
+} = {
+  ...(alphabetFilter && { alphabet: alphabetFilter }),
+  ...(filterTopic !== "all" && { topicId: parseInt(filterTopic) }),
+};
 
   const { data: words, isLoading: wordsLoading } = useListWords(queryParams, {
     query: { queryKey: getListWordsQueryKey(queryParams) },
@@ -183,6 +192,44 @@ export default function Words() {
 
   const isPending = createWord.isPending || updateWord.isPending;
 
+const handleExportCsv = () => {
+  window.location.href = "/api/words/export/csv";
+};
+
+const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const csv = await file.text();
+
+  const response = await fetch("/api/words/import/csv", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ csv }),
+  });
+
+  if (!response.ok) {
+    toast({
+      title: "Import failed",
+      description: "Could not import CSV file.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const result = await response.json();
+
+  toast({
+    title: "Import completed",
+    description: `Imported ${result.imported} words.`,
+  });
+
+  invalidate();
+  event.target.value = "";
+};
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -192,10 +239,32 @@ export default function Words() {
             {words?.length ?? 0} words in total
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add Word
-        </Button>
+       <div className="flex gap-2">
+  <Button variant="outline" onClick={handleExportCsv}>
+    <Download className="w-4 h-4 mr-2" />
+    Export CSV
+  </Button>
+
+  <label>
+    <input
+      type="file"
+      accept=".csv,text/csv"
+      className="hidden"
+      onChange={handleImportCsv}
+    />
+    <Button variant="outline" asChild>
+      <span>
+        <Upload className="w-4 h-4 mr-2" />
+        Import CSV
+      </span>
+    </Button>
+  </label>
+
+  <Button onClick={openCreate} className="gap-2">
+    <Plus className="w-4 h-4" />
+    Add Word
+  </Button>
+</div>
       </div>
 
       {/* Filters */}
