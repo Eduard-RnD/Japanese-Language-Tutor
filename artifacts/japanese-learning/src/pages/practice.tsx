@@ -52,6 +52,7 @@ export default function Practice() {
     queryKey: ["practice-word", queryParams],
     enabled: alphabets.length > 0,
     staleTime: 0,
+    refetchOnWindowFocus: false,
   }
 });
 
