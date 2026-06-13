@@ -14,6 +14,21 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const AUTH_REQUEST_TIMEOUT_MS = 10_000;
+
+async function fetchAuth(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    AUTH_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -21,7 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const response = await fetch("/api/auth/me", { credentials: "include" });
+      const response = await fetchAuth("/api/auth/me", {
+        credentials: "include",
+      });
       const data = response.ok ? await response.json() : { user: null };
       setUser(data.user ?? null);
     } catch {
@@ -33,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      await fetchAuth("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });

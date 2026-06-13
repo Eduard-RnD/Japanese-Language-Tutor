@@ -10,6 +10,7 @@ export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // Module-level configuration
@@ -359,13 +360,35 @@ export async function customFetch<T = unknown>(
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
+  const externalSignal = init.signal;
+  const controller = new AbortController();
+  const abortFromExternalSignal = () => controller.abort(externalSignal?.reason);
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
-  const response = await fetch(input, { ...init, method, headers });
-
-  if (!response.ok) {
-    const errorData = await parseErrorBody(response, method);
-    throw new ApiError(response, errorData, requestInfo);
+  if (externalSignal?.aborted) {
+    abortFromExternalSignal();
+  } else {
+    externalSignal?.addEventListener("abort", abortFromExternalSignal, {
+      once: true,
+    });
   }
 
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  try {
+    const response = await fetch(input, {
+      ...init,
+      method,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await parseErrorBody(response, method);
+      throw new ApiError(response, errorData, requestInfo);
+    }
+
+    return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+    externalSignal?.removeEventListener("abort", abortFromExternalSignal);
+  }
 }

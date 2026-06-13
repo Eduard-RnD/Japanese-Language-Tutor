@@ -213,12 +213,14 @@ export default function Practice() {
     isLoading: wordLoading,
     refetch: fetchNextWord,
     isFetching: isFetchingWord,
+    isError: wordError,
   } = useGetNextPracticeWord(queryParams, {
     query: {
       queryKey: ["practice-word", queryParams],
       enabled: alphabets.length > 0,
       staleTime: 0,
       refetchOnWindowFocus: false,
+      retry: 1,
     },
   });
 
@@ -339,6 +341,22 @@ export default function Practice() {
               <div className="h-[400px] flex items-center justify-center flex-col gap-4 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <p>Готовим следующее слово...</p>
+              </div>
+            ) : wordError ? (
+              <div className="flex h-[400px] flex-col items-center justify-center gap-4 p-8 text-center text-muted-foreground">
+                <p className="text-lg font-medium text-foreground">
+                  Не удалось загрузить слово
+                </p>
+                <p className="max-w-md text-sm">
+                  Проверьте подключение к интернету и попробуйте ещё раз.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fetchNextWord()}
+                >
+                  Повторить загрузку
+                </Button>
               </div>
             ) : !practiceWord ? (
               <div className="h-[400px] flex items-center justify-center flex-col gap-4 text-muted-foreground p-8 text-center">

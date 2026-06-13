@@ -9,6 +9,9 @@ const router = Router();
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 5_000,
+  query_timeout: 10_000,
+  statement_timeout: 10_000,
 });
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
