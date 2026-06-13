@@ -59,4 +59,5 @@ coverage/
 
 *.dump
 *.sql
+!lib/db/migrations/*.sql
 backups/

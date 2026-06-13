@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './achievement';
+export * from './activityStat';
 export * from './alphabetStat';
 export * from './answerInput';
 export * from './answerResult';
@@ -20,6 +22,8 @@ export * from './topic';
 export * from './topicInput';
 export * from './topicStat';
 export * from './topicUpdate';
+export * from './weakWordStat';
+export * from './weakWordStatAlphabet';
 export * from './word';
 export * from './wordAlphabet';
 export * from './wordInput';

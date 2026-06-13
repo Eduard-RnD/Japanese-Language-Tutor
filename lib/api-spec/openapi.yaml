@@ -422,7 +422,15 @@ components:
 
     AnswerResult:
       type: object
-      required: [correct, readingCorrect, translationCorrect, correctReading, correctTranslation, japanese]
+      required:
+        [
+          correct,
+          readingCorrect,
+          translationCorrect,
+          correctReading,
+          correctTranslation,
+          japanese,
+        ]
       properties:
         correct:
           type: boolean
@@ -439,13 +447,30 @@ components:
 
     PracticeStats:
       type: object
-      required: [totalWords, totalAttempts, correctAttempts, accuracy, topicBreakdown, alphabetBreakdown]
+      required:
+        [
+          totalWords,
+          practicedWords,
+          totalAttempts,
+          correctAttempts,
+          incorrectAttempts,
+          accuracy,
+          topicBreakdown,
+          alphabetBreakdown,
+          weakWords,
+          activityLast30Days,
+          achievements,
+        ]
       properties:
         totalWords:
+          type: integer
+        practicedWords:
           type: integer
         totalAttempts:
           type: integer
         correctAttempts:
+          type: integer
+        incorrectAttempts:
           type: integer
         accuracy:
           type: number
@@ -457,29 +482,135 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AlphabetStat"
+        weakWords:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeakWordStat"
+        activityLast30Days:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityStat"
+        achievements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Achievement"
 
     TopicStat:
       type: object
-      required: [topicName, wordCount, correctCount, incorrectCount]
+      required:
+        [
+          topicName,
+          wordCount,
+          practicedWords,
+          correctCount,
+          incorrectCount,
+          attempts,
+          accuracy,
+        ]
       properties:
         topicName:
           type: string
         wordCount:
           type: integer
+        practicedWords:
+          type: integer
         correctCount:
           type: integer
         incorrectCount:
           type: integer
+        attempts:
+          type: integer
+        accuracy:
+          type: number
 
     AlphabetStat:
       type: object
-      required: [alphabet, wordCount, correctCount, incorrectCount]
+      required:
+        [
+          alphabet,
+          wordCount,
+          practicedWords,
+          correctCount,
+          incorrectCount,
+          attempts,
+          accuracy,
+        ]
       properties:
         alphabet:
           type: string
         wordCount:
           type: integer
+        practicedWords:
+          type: integer
         correctCount:
           type: integer
         incorrectCount:
           type: integer
+        attempts:
+          type: integer
+        accuracy:
+          type: number
+
+    WeakWordStat:
+      type: object
+      required:
+        [
+          id,
+          japanese,
+          reading,
+          translation,
+          alphabet,
+          topicName,
+          correctCount,
+          incorrectCount,
+          attempts,
+          accuracy,
+        ]
+      properties:
+        id:
+          type: integer
+        japanese:
+          type: string
+        reading:
+          type: string
+        translation:
+          type: string
+        alphabet:
+          type: string
+          enum: [hiragana, katakana, kanji]
+        topicName:
+          type: ["string", "null"]
+        correctCount:
+          type: integer
+        incorrectCount:
+          type: integer
+        attempts:
+          type: integer
+        accuracy:
+          type: number
+
+    ActivityStat:
+      type: object
+      required: [date, attempts, correct, incorrect]
+      properties:
+        date:
+          type: string
+        attempts:
+          type: integer
+        correct:
+          type: integer
+        incorrect:
+          type: integer
+
+    Achievement:
+      type: object
+      required: [key, title, description, achieved]
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        achieved:
+          type: boolean

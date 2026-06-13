@@ -239,20 +239,52 @@ export const CheckAnswerResponse = zod.object({
  */
 export const GetPracticeStatsResponse = zod.object({
   "totalWords": zod.number(),
+  "practicedWords": zod.number(),
   "totalAttempts": zod.number(),
   "correctAttempts": zod.number(),
+  "incorrectAttempts": zod.number(),
   "accuracy": zod.number(),
   "topicBreakdown": zod.array(zod.object({
   "topicName": zod.string(),
   "wordCount": zod.number(),
+  "practicedWords": zod.number(),
   "correctCount": zod.number(),
-  "incorrectCount": zod.number()
+  "incorrectCount": zod.number(),
+  "attempts": zod.number(),
+  "accuracy": zod.number()
 })),
   "alphabetBreakdown": zod.array(zod.object({
   "alphabet": zod.string(),
   "wordCount": zod.number(),
+  "practicedWords": zod.number(),
   "correctCount": zod.number(),
-  "incorrectCount": zod.number()
+  "incorrectCount": zod.number(),
+  "attempts": zod.number(),
+  "accuracy": zod.number()
+})),
+  "weakWords": zod.array(zod.object({
+  "id": zod.number(),
+  "japanese": zod.string(),
+  "reading": zod.string(),
+  "translation": zod.string(),
+  "alphabet": zod.enum(['hiragana', 'katakana', 'kanji']),
+  "topicName": zod.string().nullable(),
+  "correctCount": zod.number(),
+  "incorrectCount": zod.number(),
+  "attempts": zod.number(),
+  "accuracy": zod.number()
+})),
+  "activityLast30Days": zod.array(zod.object({
+  "date": zod.string(),
+  "attempts": zod.number(),
+  "correct": zod.number(),
+  "incorrect": zod.number()
+})),
+  "achievements": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "achieved": zod.boolean()
 }))
 })
 

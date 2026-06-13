@@ -5,14 +5,22 @@
  * Japanese learning app API
  * OpenAPI spec version: 0.1.0
  */
+import type { Achievement } from './achievement';
+import type { ActivityStat } from './activityStat';
 import type { AlphabetStat } from './alphabetStat';
 import type { TopicStat } from './topicStat';
+import type { WeakWordStat } from './weakWordStat';
 
 export interface PracticeStats {
   totalWords: number;
+  practicedWords: number;
   totalAttempts: number;
   correctAttempts: number;
+  incorrectAttempts: number;
   accuracy: number;
   topicBreakdown: TopicStat[];
   alphabetBreakdown: AlphabetStat[];
+  weakWords: WeakWordStat[];
+  activityLast30Days: ActivityStat[];
+  achievements: Achievement[];
 }

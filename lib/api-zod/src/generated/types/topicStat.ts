@@ -9,6 +9,9 @@
 export interface TopicStat {
   topicName: string;
   wordCount: number;
+  practicedWords: number;
   correctCount: number;
   incorrectCount: number;
+  attempts: number;
+  accuracy: number;
 }

@@ -9,6 +9,9 @@
 export interface AlphabetStat {
   alphabet: string;
   wordCount: number;
+  practicedWords: number;
   correctCount: number;
   incorrectCount: number;
+  attempts: number;
+  accuracy: number;
 }

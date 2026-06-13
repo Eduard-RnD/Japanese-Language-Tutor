@@ -1,4 +1,4 @@
-import { useGetPracticeStats, useListWords } from "@workspace/api-client-react";
+import { useGetPracticeStats } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import {
   Award,
@@ -28,27 +28,46 @@ interface BreakdownStat {
   alphabet?: string;
   topicName?: string;
   wordCount: number;
+  practicedWords: number;
   correctCount: number;
   incorrectCount: number;
+  attempts: number;
+  accuracy: number;
 }
 
 interface StatsData {
   totalWords: number;
+  practicedWords: number;
   totalAttempts: number;
   correctAttempts: number;
+  incorrectAttempts: number;
   accuracy: number;
   alphabetBreakdown: BreakdownStat[];
   topicBreakdown: BreakdownStat[];
-}
-
-interface WordData {
-  id: number;
-  japanese: string;
-  reading: string;
-  translation: string;
-  alphabet: string;
-  correctCount?: number;
-  incorrectCount?: number;
+  weakWords: Array<{
+    id: number;
+    japanese: string;
+    reading: string;
+    translation: string;
+    alphabet: string;
+    topicName: string | null;
+    correctCount: number;
+    incorrectCount: number;
+    attempts: number;
+    accuracy: number;
+  }>;
+  activityLast30Days: Array<{
+    date: string;
+    attempts: number;
+    correct: number;
+    incorrect: number;
+  }>;
+  achievements: Array<{
+    key: string;
+    title: string;
+    description: string;
+    achieved: boolean;
+  }>;
 }
 
 const ALPHABETS = [
@@ -76,9 +95,8 @@ function getAccuracy(correct: number, incorrect: number) {
 
 export default function Stats() {
   const { data: rawStats, isLoading: statsLoading } = useGetPracticeStats();
-  const { data: rawWords, isLoading: wordsLoading } = useListWords();
 
-  if (statsLoading || wordsLoading) {
+  if (statsLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="mr-2 h-6 w-6 animate-spin" />
@@ -98,10 +116,14 @@ export default function Stats() {
   }
 
   const stats = rawStats as StatsData;
-  const words = (rawWords ?? []) as WordData[];
   const accuracyPct = Math.round(stats.accuracy * 100);
-  const incorrectAttempts = stats.totalAttempts - stats.correctAttempts;
-  const currentStreak = 0;
+  const firstInactiveDay = [...stats.activityLast30Days]
+    .reverse()
+    .findIndex((day) => day.attempts === 0);
+  const currentStreak =
+    firstInactiveDay === -1
+      ? stats.activityLast30Days.length
+      : firstInactiveDay;
 
   const sortedTopics = [...stats.topicBreakdown].sort((a, b) => {
     const aAttempts = getAttempts(a);
@@ -114,54 +136,11 @@ export default function Stats() {
     );
   });
 
-  const weakWords = words
-    .map((word) => {
-      const correct = word.correctCount ?? 0;
-      const incorrect = word.incorrectCount ?? 0;
-      return {
-        ...word,
-        correct,
-        incorrect,
-        attempts: correct + incorrect,
-        accuracy: getAccuracy(correct, incorrect),
-      };
-    })
-    .filter((word) => word.incorrect > 0)
-    .sort((a, b) => b.incorrect - a.incorrect || a.accuracy - b.accuracy)
-    .slice(0, 8);
-
-  const achievements = [
-    {
-      title: "Первые 10 слов",
-      description: "Добавить не менее 10 слов",
-      achieved: stats.totalWords >= 10,
-    },
-    {
-      title: "Большой словарь",
-      description: "Добавить 100 слов",
-      achieved: stats.totalWords >= 100,
-    },
-    {
-      title: "Точность выше 80%",
-      description: "Достичь общей точности 80%",
-      achieved: stats.totalAttempts > 0 && accuracyPct >= 80,
-    },
-    {
-      title: "Первые кандзи",
-      description: "Начать практиковать кандзи",
-      achieved: stats.alphabetBreakdown.some(
-        (item) => item.alphabet === "kanji" && getAttempts(item) > 0,
-      ),
-    },
-    {
-      title: "Серия 7 дней",
-      description: "Заниматься семь дней подряд",
-      achieved: currentStreak >= 7,
-    },
-  ];
+  const weakWords = stats.weakWords;
+  const achievements = stats.achievements;
 
   const summaryCards = [
-    { label: "Всего слов", value: stats.totalWords, icon: BookOpen },
+    { label: "Изучено слов", value: stats.practicedWords, icon: BookOpen },
     { label: "Всего попыток", value: stats.totalAttempts, icon: TrendingUp },
     { label: "Точность", value: `${accuracyPct}%`, icon: Target },
     { label: "Текущая серия", value: `${currentStreak} дней`, icon: Flame },
@@ -177,6 +156,19 @@ export default function Stats() {
           Ваш прогресс, слабые места и следующие цели
         </p>
       </div>
+
+      {stats.totalAttempts === 0 && (
+        <Card className="border-dashed shadow-sm">
+          <CardContent className="space-y-2 py-12 text-center">
+            <h2 className="font-serif text-xl font-bold text-primary">
+              У вас пока нет статистики
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Пройдите первую тренировку, чтобы здесь появился прогресс.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {summaryCards.map((item) => (
@@ -209,7 +201,7 @@ export default function Stats() {
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">
-                  {stats.correctAttempts} правильных и {incorrectAttempts}{" "}
+                  {stats.correctAttempts} правильных и {stats.incorrectAttempts}{" "}
                   неправильных ответов
                 </span>
                 <span className="font-serif text-2xl font-bold text-primary">
@@ -233,8 +225,8 @@ export default function Stats() {
             );
             const correct = stat?.correctCount ?? 0;
             const incorrect = stat?.incorrectCount ?? 0;
-            const attempts = correct + incorrect;
-            const accuracy = getAccuracy(correct, incorrect);
+            const attempts = stat?.attempts ?? 0;
+            const accuracy = Math.round((stat?.accuracy ?? 0) * 100);
 
             return (
               <Card
@@ -247,7 +239,7 @@ export default function Stats() {
                       {alphabet.label}
                     </span>
                     <Badge variant="secondary">
-                      {stat?.wordCount ?? 0} слов
+                      {stat?.practicedWords ?? 0}/{stat?.wordCount ?? 0} слов
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -296,7 +288,7 @@ export default function Stats() {
               </TableHeader>
               <TableBody>
                 {sortedTopics.map((topic) => {
-                  const attempts = getAttempts(topic);
+                  const attempts = topic.attempts;
                   return (
                     <TableRow key={topic.topicName}>
                       <TableCell className="font-medium">
@@ -308,7 +300,7 @@ export default function Stats() {
                       <TableCell className="text-right">{attempts}</TableCell>
                       <TableCell className="text-right font-semibold">
                         {attempts > 0
-                          ? `${getAccuracy(topic.correctCount, topic.incorrectCount)}%`
+                          ? `${Math.round(topic.accuracy * 100)}%`
                           : "Нет попыток"}
                       </TableCell>
                     </TableRow>
@@ -374,10 +366,10 @@ export default function Stats() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-semibold text-destructive">
-                      {word.incorrect}
+                      {word.incorrectCount}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
-                      {word.accuracy}%
+                      {Math.round(word.accuracy * 100)}%
                     </TableCell>
                   </TableRow>
                 ))}
@@ -396,9 +388,22 @@ export default function Stats() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex min-h-36 items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              Данных об активности пока нет. Завершайте тренировки, чтобы
-              увидеть динамику.
+            <div className="grid grid-cols-10 gap-1 sm:grid-cols-[repeat(15,minmax(0,1fr))]">
+              {stats.activityLast30Days.map((day) => (
+                <div
+                  key={day.date}
+                  title={`${day.date}: ${day.attempts} попыток`}
+                  className={`aspect-square rounded-sm border ${
+                    day.attempts === 0
+                      ? "bg-muted/40"
+                      : day.attempts < 3
+                        ? "bg-primary/25"
+                        : day.attempts < 6
+                          ? "bg-primary/55"
+                          : "bg-primary"
+                  }`}
+                />
+              ))}
             </div>
           </CardContent>
         </Card>

@@ -139,24 +139,72 @@ export interface AnswerResult {
 export interface TopicStat {
   topicName: string;
   wordCount: number;
+  practicedWords: number;
   correctCount: number;
   incorrectCount: number;
+  attempts: number;
+  accuracy: number;
 }
 
 export interface AlphabetStat {
   alphabet: string;
   wordCount: number;
+  practicedWords: number;
   correctCount: number;
   incorrectCount: number;
+  attempts: number;
+  accuracy: number;
+}
+
+export type WeakWordStatAlphabet = typeof WeakWordStatAlphabet[keyof typeof WeakWordStatAlphabet];
+
+
+export const WeakWordStatAlphabet = {
+  hiragana: 'hiragana',
+  katakana: 'katakana',
+  kanji: 'kanji',
+} as const;
+
+export interface WeakWordStat {
+  id: number;
+  japanese: string;
+  reading: string;
+  translation: string;
+  alphabet: WeakWordStatAlphabet;
+  /** @nullable */
+  topicName: string | null;
+  correctCount: number;
+  incorrectCount: number;
+  attempts: number;
+  accuracy: number;
+}
+
+export interface ActivityStat {
+  date: string;
+  attempts: number;
+  correct: number;
+  incorrect: number;
+}
+
+export interface Achievement {
+  key: string;
+  title: string;
+  description: string;
+  achieved: boolean;
 }
 
 export interface PracticeStats {
   totalWords: number;
+  practicedWords: number;
   totalAttempts: number;
   correctAttempts: number;
+  incorrectAttempts: number;
   accuracy: number;
   topicBreakdown: TopicStat[];
   alphabetBreakdown: AlphabetStat[];
+  weakWords: WeakWordStat[];
+  activityLast30Days: ActivityStat[];
+  achievements: Achievement[];
 }
 
 export type ListWordsParams = {
